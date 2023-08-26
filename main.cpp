@@ -12,7 +12,7 @@ void test_constant() {
         }
     };
     auto result = run(gen, test);
-    std::cout << name << ": " << to_string(result) << std::endl;
+    std::cout << "[" << name << "] " << to_string(result) << std::endl;
 }
 
 void test_constant_bad() {
@@ -24,11 +24,23 @@ void test_constant_bad() {
       }
     };
     auto result = run(gen, test);
-    std::cout << name << ": " << to_string(result) << std::endl;
+    std::cout << "[" << name << "] " << to_string(result) << std::endl;
+}
+
+void test_unsigned_int() {
+    auto name = "unsigned_int(10) should never generate above 10";
+    auto gen = Gen::unsigned_int(10);
+    auto test = [](unsigned int num) {
+      //std::cout << "Generated: " << num << std::endl;
+      if (num > 10) { throw TestException("Got something above 10: " + std::to_string(num)); }
+    };
+    auto result = run(gen, test);
+    std::cout << "[" << name << "] " << to_string(result) << std::endl;
 }
 
 int main() {
     test_constant();
     test_constant_bad();
+    test_unsigned_int();
     return 0;
 }
