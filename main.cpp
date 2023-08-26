@@ -1,15 +1,34 @@
 #include "pbt.h"
 #include <iostream>
 
-int main() {
-    auto gen = constant(42U);
-    auto test = [](unsigned int num){
-        if (num == 100) {
-            throw std::runtime_error("Got a hundred, gasp!");
+// TODO somehow abstract the boilerplate code in each test?
+
+void test_constant() {
+    auto name = "constant(42) should always generate 42";
+    auto gen = Gen::constant(42);
+    auto test = [](int num) {
+        if (num != 42) {
+            throw TestException("Got something other than what we put into the constant Gen!");
         }
     };
-    TestResult<unsigned int> result = run(gen, test);
+    auto result = run(gen, test);
+    std::cout << name << ": " << to_string(result) << std::endl;
+}
 
-    std::cout << "result: " << to_string(result) << std::endl;
+void test_constant_bad() {
+    auto name = "constant(42) should always generate 100";
+    auto gen = Gen::constant(42);
+    auto test = [](int num) {
+      if (num != 100) {
+          throw TestException("Got something other than the bad value we expected!");
+      }
+    };
+    auto result = run(gen, test);
+    std::cout << name << ": " << to_string(result) << std::endl;
+}
+
+int main() {
+    test_constant();
+    test_constant_bad();
     return 0;
 }

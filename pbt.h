@@ -14,6 +14,20 @@
 #define MAX_GEN_ATTEMPTS_PER_VALUE 15
 // #define RAND_TYPE unsigned int
 
+// TestException
+
+class TestException : public std::exception {
+private:
+    char* message;
+
+public:
+    explicit TestException(char * msg)      : message(msg) {}
+    explicit TestException(std::string msg) : message(msg.data()) {}
+    char* what() { return message; }
+};
+
+// RandomRun
+
 class RandomRun {
 public:
     RandomRun() {
@@ -58,7 +72,6 @@ struct Rejected {
 };
 template <typename T> using GenResult = std::variant<Generated<T>, Rejected>;
 
-
 // Generator
 
 template <typename T> class Generator {
@@ -75,18 +88,26 @@ private:
     FunctionType fn;
 };
 
-// Constant Generator
+// Various generators
 
-template <typename T> Generator<T> constant(T const& val) {
-    return Generator<T>([val](RandSource const&) {
-        return GenResult<T>{Generated<T>{RandomRun(), val}};
-    });
+namespace Gen {
+
+    template <typename T> Generator<T> constant(T const& val) {
+        return Generator<T>([val](RandSource const&) {
+          return GenResult<T>{Generated<T>{RandomRun(), val}};
+        });
+    }
+
 }
+
 
 // TestResult
 
 struct Passes {};
-template <typename T> struct FailsWith { T value; };
+template <typename T> struct FailsWith {
+    T value;
+    std::string error;
+};
 struct CannotGenerateValues { std::map<std::string,int> rejections; };
 template <typename T> using TestResult = std::variant<Passes,FailsWith<T>,CannotGenerateValues>;
 
@@ -94,8 +115,8 @@ template <typename T>
 std::string to_string(const TestResult<T>& result) {
     struct stringifier {
         std::string operator()(Passes _)                      { return "Passes"; }
-        std::string operator()(FailsWith<T> _)                { return "Fails"; }
-        std::string operator()(const CannotGenerateValues& _) { return "Cannot generate values"; }
+        std::string operator()(FailsWith<T> _)                { return "Fails"; } // TODO show the value and the error
+        std::string operator()(const CannotGenerateValues& _) { return "Cannot generate values"; } // TODO show the rejections
     };
     return std::visit(stringifier{}, result);
 }
@@ -119,8 +140,8 @@ TestResult<T> run(Generator<T> generator, FN testFunction) {
                 generated_successfully = true;
                 try {
                     testFunction(generated->generated_value);
-                } catch (...) {
-                    return FailsWith<T>{generated->generated_value};
+                } catch (TestException &e) {
+                    return FailsWith<T>{generated->generated_value, e.what()};
                 }
             } else if (auto rejected = std::get_if<Rejected>(&genResult)) {
                 rejections[rejected->reason]++;
