@@ -1,16 +1,11 @@
 #ifndef PBT_PBT_H
 #define PBT_PBT_H
 
-#include <functional>
 #include <iostream>
 #include <map>
 #include <random>
-#include <string>
-#include <utility>
-#include <variant>
-#include <vector>
 
-#define MAX_RANDOMRUN_LENGTH (64 * 1024)// 64 k items
+#define MAX_RANDOMRUN_LENGTH (64 * 1024)// 64k items
 #define MAX_GENERATED_VALUES_PER_TEST 100
 #define MAX_GEN_ATTEMPTS_PER_VALUE 15
 #define RAND_TYPE unsigned int
@@ -80,10 +75,6 @@ GenResult<T> generated(RandomRun run, T val) {
     return GenResult<T>{Generated<T>{run, val}};
 }
 template<typename T>
-GenResult<T> generated(T val) {
-    return generated(RandomRun(), val);
-}
-template<typename T>
 GenResult<T> rejected(std::string reason) {
     return GenResult<T>{Rejected{std::move(reason)}};
 }
@@ -112,7 +103,7 @@ namespace Gen {
     template<typename T>
     Generator<T> constant(T const &val) {
         return Generator<T>([val](RandSource const &) {
-            return generated(val);
+            return generated(RandomRun(),val);
         });
     }
     Generator<unsigned int> unsigned_int(unsigned int max) {
@@ -205,6 +196,12 @@ TestResult<T> run(Generator<T> generator, FN testFunction) {
     }
     // MAX_GENERATED_VALUES_PER_TEST values generated, all passed the test.
     return Passes();
+}
+
+template <typename T, typename FN>
+void run_test(const std::string &name, Generator<T> gen, FN testFunction) {
+    auto result = run(gen, testFunction);
+    std::cout << "[" << name << "] " << to_string(result) << std::endl;
 }
 
 #endif//PBT_PBT_H
