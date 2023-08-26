@@ -29,9 +29,18 @@ void test_unsigned_int() {
              });
 }
 
+void test_reject() {
+    run_test("reject() fails with the rejection message",
+             Gen::reject<int>("My reason for failing"),
+             [](int) {
+                 throw TestException("Shouldn't have even got to the test function");
+             });
+}
+
 int main() {
     test_constant();
     test_constant_bad();
     test_unsigned_int();
+    test_reject();
     return 0;
 }

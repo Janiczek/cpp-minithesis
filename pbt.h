@@ -100,8 +100,7 @@ private:
 
 namespace Gen {
 
-    template<typename T>
-    Generator<T> constant(T const &val) {
+    template<typename T> Generator<T> constant(T const &val) {
         return Generator<T>([val](RandSource const &) {
             return generated(RandomRun(),val);
         });
@@ -132,6 +131,11 @@ namespace Gen {
             return std::visit(handler{max}, rand);
         });
     }
+    template<typename T> Generator<T> reject(std::string reason) {
+        return Generator<T>([reason](RandSource const &) {
+          return rejected<T>(reason);
+        });
+    }
 
 }// namespace Gen
 
@@ -153,12 +157,22 @@ using TestResult = std::variant<Passes, FailsWith<T>, CannotGenerateValues>;
 template<typename T>
 std::string to_string(const TestResult<T> &result) {
     struct stringifier {
-        std::string operator()(Passes _) { return "Passes"; }
+        std::string operator()(Passes) { return "Passes"; }
         std::string operator()(FailsWith<T> f) { return "Fails: \"" + f.error + "\""; }// TODO show the value
         std::string operator()(const CannotGenerateValues &cgv) {
-            // TODO show top 5 reasons
-            auto most_common_reason = std::max_element(cgv.rejections.begin(), cgv.rejections.end())->first;
-            return "Cannot generate values. Most common reason: " + most_common_reason;
+
+            // Partially sort the map (well, a vector of pairs) to get the top 5 rejections
+            auto descByValue = [](const auto& a, const auto& b) { return a.second > b.second; };
+            auto size = std::min(5, static_cast<int>(cgv.rejections.size()));
+            std::vector<std::pair<std::string, int>> sorted_items(cgv.rejections.begin(), cgv.rejections.end());
+            std::partial_sort(sorted_items.begin(), sorted_items.begin() + size, sorted_items.end(), descByValue);
+
+            std::string reasons;
+            for (int i = 0; i < size; i++) {
+                reasons += " - " + sorted_items[i].first + "\n";
+            }
+
+            return "Cannot generate values. Most common reasons:\n" + reasons;
         }
     };
     return std::visit(stringifier{}, result);
