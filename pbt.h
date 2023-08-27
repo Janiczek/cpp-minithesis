@@ -88,7 +88,7 @@ public:
 
     explicit Generator(FunctionType function) : fn(std::move(function)) {}
 
-    [[nodiscard]] GenResult<T> run(RandSource source) const {
+    GenResult<T> operator()(RandSource source) {
         return fn(source);
     }
 
@@ -192,7 +192,7 @@ TestResult<T> run(Generator<T> generator, FN testFunction) {
         std::map<std::string, int> rejections;
         bool generated_successfully = false;
         for (int gen_attempt = 0; gen_attempt < MAX_GEN_ATTEMPTS_PER_VALUE && !generated_successfully; gen_attempt++) {
-            GenResult<T> genResult = generator.run(liveSource);
+            GenResult<T> genResult = generator(liveSource);
             if (auto generated = std::get_if<Generated<T>>(&genResult)) {
                 generated_successfully = true;
                 try {
