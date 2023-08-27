@@ -92,6 +92,26 @@ public:
         return fn(source);
     }
 
+    template <typename FN>
+    Generator<std::invoke_result_t<FN,T>> map(FN map_fn) const {
+        using U = std::invoke_result_t<FN,T>;
+        return Generator<U>([this,map_fn](const RandSource& rand) {
+            GenResult<T> result = this->fn(rand);
+            struct mapper {
+                FN map_function;
+                explicit mapper(FN map_function) : map_function(map_function) {}
+                GenResult<U> operator()(Generated<T> g) {
+                    auto val2 = map_function(g.value);
+                    return generated(g.run, val2);
+                }
+                GenResult<U> operator()(const Rejected& r) {
+                    return r;
+                }
+            };
+            return std::visit(mapper{map_fn}, result);
+        });
+    }
+
 private:
     FunctionType fn;
 };
@@ -169,10 +189,10 @@ std::string to_string(const TestResult<T> &result) {
 
             std::string reasons;
             for (int i = 0; i < size; i++) {
-                reasons += " - " + sorted_items[i].first + "\n";
+                reasons += "\n - " + sorted_items[i].first;
             }
 
-            return "Cannot generate values. Most common reasons:\n" + reasons;
+            return "Cannot generate values. Most common reasons:" + reasons;
         }
     };
     return std::visit(stringifier{}, result);

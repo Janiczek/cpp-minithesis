@@ -37,10 +37,21 @@ void test_reject() {
              });
 }
 
+void test_map() {
+    run_test("map() transforms the value",
+             Gen::unsigned_int(10).map([](auto n){return n * 2;}),
+             [](unsigned int n) {
+                 if (n % 2 == 1) {
+                     throw TestException("Somehow we got an odd value when .map() should have turned them all into evens");
+                 }
+             });
+}
+
 int main() {
     test_constant();
     test_constant_bad();
     test_unsigned_int();
     test_reject();
+    test_map();
     return 0;
 }
