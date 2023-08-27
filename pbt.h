@@ -158,7 +158,7 @@ template<typename T>
 std::string to_string(const TestResult<T> &result) {
     struct stringifier {
         std::string operator()(Passes) { return "Passes"; }
-        std::string operator()(FailsWith<T> f) { return "Fails: \"" + f.error + "\""; }// TODO show the value
+        std::string operator()(FailsWith<T> f) { return "Fails:\n - value: " + std::to_string(f.value) + "\n - error: \"" + f.error + "\""; }
         std::string operator()(const CannotGenerateValues &cgv) {
 
             // Partially sort the map (well, a vector of pairs) to get the top 5 rejections
