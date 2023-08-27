@@ -33,6 +33,16 @@ public:
     [[nodiscard]] bool is_full() const { return run.size() >= MAX_RANDOMRUN_LENGTH; }
     void push_back(RAND_TYPE n) { run.push_back(n); }
     RAND_TYPE next() { return *it++; }
+    friend std::ostream& operator<< (std::ostream& os, const RandomRun& random_run) {
+        auto size = random_run.run.size();
+        os << "[";
+        for (size_t i = 0; i < size; i++) {
+            os << random_run.run[i];
+            if (i < size - 1) { os << ","; }
+        }
+        os << "]";
+        return os;
+    }
 
 private:
     std::vector<RAND_TYPE> run;
@@ -198,6 +208,17 @@ std::string to_string(const TestResult<T> &result) {
     return std::visit(stringifier{}, result);
 }
 
+// Shrinker
+
+template<typename T, typename FN>
+FailsWith<T> shrink(Generated<T> generated, Generator<T> generator, FN testFunction, std::string failMessage) {
+    std::cout << "----------------" << std::endl;
+    std::cout << "Let's shrink: " << generated.value << std::endl;
+    std::cout << "Random run: " << generated.run << std::endl;
+    // TODO actually shrink
+    return FailsWith<T>{generated.value, failMessage};
+}
+
 // Runner
 
 template<typename T, typename FN>
@@ -218,7 +239,7 @@ TestResult<T> run(Generator<T> generator, FN testFunction) {
                 try {
                     testFunction(generated->value);
                 } catch (TestException &e) {
-                    return FailsWith<T>{generated->value, e.what()};
+                    return shrink(*generated, generator, testFunction, e.what());
                 }
             } else if (auto rejected = std::get_if<Rejected>(&genResult)) {
                 rejections[rejected->reason]++;

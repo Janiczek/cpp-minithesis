@@ -29,6 +29,15 @@ void test_unsigned_int() {
              });
 }
 
+void test_unsigned_int_bad() {
+    run_test("unsigned_int(10) should always generate above 10",
+             Gen::unsigned_int(10),
+             [](unsigned int num) {
+               //std::cout << "Generated: " << num << std::endl;
+               if (num <= 10) { throw TestException("Got something <= 10: " + std::to_string(num)); }
+             });
+}
+
 void test_reject() {
     run_test("reject() fails with the rejection message",
              Gen::reject<int>("My reason for failing"),
@@ -51,6 +60,7 @@ int main() {
     test_constant();
     test_constant_bad();
     test_unsigned_int();
+    test_unsigned_int_bad();
     test_reject();
     test_map();
     return 0;
