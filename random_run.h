@@ -2,8 +2,8 @@
 #define PBT_RANDOM_RUN_H
 
 #include "chunk.h"
-#include "shrink_cmd.h"
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -37,18 +37,6 @@ public:
         // chunk size 4
         //       index 2
         return (c.index + c.size <= run.size());
-    }
-    bool has_a_chance(ShrinkCmd cmd) {
-        struct predicate {
-            RandomRun &run;
-            explicit predicate(RandomRun &run) : run(run) {}
-
-            bool operator()(ZeroChunk c) { return run.has_a_chance(c.chunk); }
-            bool operator()(SortChunk c) { return run.has_a_chance(c.chunk); }
-            bool operator()(DeleteChunkAndMaybeDecPrevious c) { return run.has_a_chance(c.chunk); }
-            bool operator()(MinimizeChoice c) { return run.length() > c.index; }
-        };
-        return std::visit(predicate{*this}, cmd);
     }
     void push_back(RAND_TYPE n) { run.push_back(n); }
     size_t length() const { return run.size(); }

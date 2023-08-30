@@ -7,6 +7,7 @@
 #include "random_run.h"
 #include "test_exception.h"
 #include "test_result.h"
+#include "shrink_cmd.h"
 
 #include <iostream>
 #include <string>
@@ -25,109 +26,6 @@ struct ShrinkResult {
     bool was_improvement;
     ShrinkState<T> state;
 };
-
-size_t max_chunk_size = 8;
-
-/* Will generate ShrinkCmds for all chunks of sizes 1,2,4,8 in bounds of the
- * given RandomRun length.
- *
- * chunkCmds(10, false, [](Chunk c){ return SortChunk(c); })
- * -->
- * [ // Chunks of size 8
- *   SortChunk { chunkSize = 8, startIndex = 2 }, // [..XXXXXXXX]
- *   SortChunk { chunkSize = 8, startIndex = 1 }, // [.XXXXXXXX.]
- *   SortChunk { chunkSize = 8, startIndex = 0 }, // [XXXXXXXX..]
- *
- *   // Chunks of size 4
- *   SortChunk { chunkSize = 4, startIndex = 6 }, // [......XXXX]
- *   SortChunk { chunkSize = 4, startIndex = 5 }, // [.....XXXX.]
- *   // ...
- *   SortChunk { chunkSize = 4, startIndex = 1 }, // [.XXXX.....]
- *   SortChunk { chunkSize = 4, startIndex = 0 }, // [XXXX......]
- *
- *   // Chunks of size 3
- *   SortChunk { chunkSize = 3, startIndex = 7 }, // [.......XXX]
- *   SortChunk { chunkSize = 3, startIndex = 6 }, // [......XXX.]
- *   // ...
- *   SortChunk { chunkSize = 3, startIndex = 1 }, // [.XXX......]
- *   SortChunk { chunkSize = 3, startIndex = 0 }, // [XXX.......]
- *
- *   // Chunks of size 2
- *   SortChunk { chunkSize = 2, startIndex = 8 }, // [........XX]
- *   SortChunk { chunkSize = 2, startIndex = 7 }, // [.......XX.]
- *   // ...
- *   SortChunk { chunkSize = 2, startIndex = 1 }, // [.XX.......]
- *   SortChunk { chunkSize = 2, startIndex = 0 }, // [XX........]
- * ]
- */
-template<typename T, typename FN>
-std::vector<T> chunk_cmds(size_t length, bool allow_chunks_size1, FN chunk_to_cmd) {
-    std::vector<T> acc;
-    uint8_t chunk_size = allow_chunks_size1 ? 1 : 2;
-    while (chunk_size <= max_chunk_size) {
-        size_t start_index = 0;
-        while ((int)start_index <= ((int)length - chunk_size)) {
-            acc.push_back(chunk_to_cmd(Chunk{chunk_size, start_index}));
-            start_index++;
-        }
-
-        if (chunk_size == 2 || chunk_size == 3) {
-            // chunks of 3 are common, so we don't _just_ double all the time.
-            chunk_size++;
-        } else {
-            chunk_size *= 2;
-        }
-    }
-    return acc;
-}
-
-std::vector<ShrinkCmd> deletion_cmds(size_t length) {
-    return chunk_cmds<ShrinkCmd>(
-            length,
-            true,
-            [](Chunk c) { return DeleteChunkAndMaybeDecPrevious{c}; });
-}
-
-std::vector<ShrinkCmd> minimize_cmds(size_t length) {
-    std::vector<ShrinkCmd> acc;
-    for (size_t i = 0; i < length; i++) {
-        acc.push_back(MinimizeChoice{i});
-    }
-    return acc;
-}
-
-std::vector<ShrinkCmd> sort_cmds(size_t length) {
-    bool allow_chunks_size1 = false; // doesn't make sense for sorting
-    return chunk_cmds<ShrinkCmd>(
-            length,
-            allow_chunks_size1,
-            [](Chunk c) { return SortChunk{c}; });
-}
-
-std::vector<ShrinkCmd> zero_cmds(size_t length) {
-    bool allow_chunks_size1 = false; // already happens in binary search
-    return chunk_cmds<ShrinkCmd>(
-            length,
-            allow_chunks_size1,
-            [](Chunk c) { return ZeroChunk{c}; });
-}
-
-std::vector<ShrinkCmd> shrink_cmds(RandomRun r) {
-    std::vector<ShrinkCmd> acc;
-
-    size_t length = r.length();
-    std::vector<ShrinkCmd> deletions = deletion_cmds(length);
-    std::vector<ShrinkCmd> zeros = zero_cmds(length);
-    std::vector<ShrinkCmd> sorts = sort_cmds(length);
-    std::vector<ShrinkCmd> minimizes = minimize_cmds(length);
-
-    acc.insert(acc.end(), std::make_move_iterator(deletions.begin()), std::make_move_iterator(deletions.end()));
-    acc.insert(acc.end(), std::make_move_iterator(zeros.begin()),     std::make_move_iterator(zeros.end()));
-    acc.insert(acc.end(), std::make_move_iterator(sorts.begin()),     std::make_move_iterator(sorts.end()));
-    acc.insert(acc.end(), std::make_move_iterator(minimizes.begin()), std::make_move_iterator(minimizes.end()));
-
-    return acc;
-}
 
 // Shrinker
 
@@ -277,7 +175,7 @@ ShrinkState<T> shrink_once(ShrinkState<T> state, Generator<T> generator, FN test
            In the next `shrink -> shrink_once` loop we'll generate a better set
            of Cmds, more tailored to the current best RandomRun.
         */
-        if (!state.run.has_a_chance(cmd)) {
+        if (!has_a_chance(cmd, state.run)) {
             continue;
         }
         ShrinkResult<T> result = shrink_with_cmd(cmd, state, generator, test_function);

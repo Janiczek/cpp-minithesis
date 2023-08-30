@@ -30,21 +30,19 @@ std::string to_string(const TestResult<T> &result) {
         std::string operator()(FailsWith<T> f) { return "Fails:\n - value: " + std::to_string(f.value) + "\n - error: \"" + f.error + "\""; }
         std::string operator()(const CannotGenerateValues &cgv) {
 
-            // Partially sort the map (well, a vector of pairs) to get the top 5 rejections
+            // Sort the map (well, a vector of pairs)
             auto descByValue = [](const auto &a, const auto &b) { return a.second > b.second; };
-            auto size = std::min(5, static_cast<int>(cgv.rejections.size()));
             std::vector<std::pair<std::string, int>> sorted_items(cgv.rejections.begin(), cgv.rejections.end());
-            std::partial_sort(sorted_items.begin(),
-                              sorted_items.begin() + size,
-                              sorted_items.end(),
-                              descByValue);
+            std::sort(sorted_items.begin(),
+                      sorted_items.end(),
+                      descByValue);
 
             std::string reasons;
-            for (int i = 0; i < size; i++) {
-                reasons += "\n - " + sorted_items[i].first;
+            for (auto item : sorted_items) {
+                reasons += "\n - " + item.first + " (" + std::to_string(item.second) + "x)";
             }
 
-            return "Cannot generate values. Most common reasons:" + reasons;
+            return "Cannot generate values. Reasons:" + reasons;
         }
     };
     return std::visit(stringifier{}, result);
