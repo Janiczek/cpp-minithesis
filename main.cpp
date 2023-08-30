@@ -57,9 +57,6 @@ void test_map() {
 }
 
 int main() {
-    
-    shrink_cmds(RandomRun({1,2,3,4,5}));
-    
     test_constant();
     test_constant_bad();
     test_unsigned_int();
