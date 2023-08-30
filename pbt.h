@@ -20,15 +20,14 @@
 template<typename T, typename FN>
 TestResult<T> run(Generator<T> generator, FN test_function) {
 
-    RandomRun empty_run;
     std::random_device r;
     std::mt19937 rng(r());
-    Live live_source{empty_run, rng};
 
     for (int i = 0; i < MAX_GENERATED_VALUES_PER_TEST; i++) {
         std::map<std::string, int> rejections;
         bool generated_successfully = false;
         for (int gen_attempt = 0; gen_attempt < MAX_GEN_ATTEMPTS_PER_VALUE && !generated_successfully; gen_attempt++) {
+            Live live_source{RandomRun(), rng};
             GenResult<T> gen_result = generator(live_source);
             if (auto generated = std::get_if<Generated<T>>(&gen_result)) {
                 generated_successfully = true;

@@ -25,8 +25,9 @@ public:
     template<typename FN>
     Generator<std::invoke_result_t<FN, T>> map(FN map_fn) const {
         using U = std::invoke_result_t<FN, T>;
-        return Generator<U>([this, map_fn](const RandSource &rand) {
-            GenResult<T> result = this->fn(rand);
+        auto fn = this->fn;
+        return Generator<U>([fn, map_fn](RandSource rand) {
+            GenResult<T> result = fn(rand);
             struct mapper {
                 FN map_function;
                 explicit mapper(FN map_function) : map_function(map_function) {}
@@ -140,7 +141,7 @@ namespace Gen {
        Shrinks towards the smaller of the argument.
      */
     Generator<unsigned int> unsigned_int(unsigned int min, unsigned int max) {
-        if (min >  max) { return unsigned_int(max, min); }
+        if (min > max)  { return unsigned_int(max, min); }
         if (min == max) { return constant(min); }
         unsigned int range = max - min;
         return Gen::unsigned_int(range).map([min](unsigned int x){ return x + min; });
