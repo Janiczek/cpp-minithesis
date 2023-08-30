@@ -42,6 +42,31 @@ public:
             return std::visit(mapper{map_fn}, result);
         });
     }
+    
+    template<typename FN>
+    Generator<T> filter(FN predicate) const {
+        auto fn = this->fn;
+        return Generator<T>([fn, predicate](RandSource rand) {
+            GenResult<T> result = fn(rand);
+            
+            struct filter_mapper {
+                FN predicate_function;
+                explicit filter_mapper(FN predicate_function) : predicate_function(predicate_function) {}
+                GenResult<T> operator()(Generated<T> g) {
+                    if (predicate_function(g.value)) {
+                        return g;
+                    } else {
+                        return rejected<T>("Value filtered out");
+                    }
+                }
+                GenResult<T> operator()(const Rejected &r) {
+                    return r;
+                }
+            };
+            
+            return std::visit(filter_mapper{predicate}, result);
+        });
+    }
 
 private:
     FunctionType fn;
