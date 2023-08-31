@@ -22,6 +22,18 @@ public:
         return fn(source);
     }
 
+    /* Runs the provided function on each value of the generator.
+
+       Gen::constant(100)                                 --> 100
+       Gen::constant(100).map([](int i){ return i + 2; }) --> 102
+
+       This doesn't incur any extra RandomRun footprint.
+
+       Shrunk values will still honor this mapping:
+
+       Gen::unsigned_int(10).map([](auto i){ return i * 100; }) --> 0, 100, 200, ..., 1000
+                                                                    even after shrinking
+     */
     template<typename FN>
     Generator<std::invoke_result_t<FN, T>> map(FN map_fn) const {
         using U = std::invoke_result_t<FN, T>;
@@ -43,6 +55,16 @@ public:
         });
     }
     
+    /* Filters all generated values by the provided predicate.
+       (Keeps all values x where predicate(x) == true.)
+
+       Gen::unsigned_int(10)                                         --> 0, 1, 2, 3, ..., 10
+       Gen::unsigned_int(10).filter([](int i){ return i % 2 == 1; }) --> 1, 3, 5, ..., 9
+
+       This doesn't incur any extra RandomRun footprint.
+
+       Shrunk values will still honor this filtering.
+     */
     template<typename FN>
     Generator<T> filter(FN predicate) const {
         auto fn = this->fn;
