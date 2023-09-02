@@ -31,7 +31,7 @@ std::string shrink_cmd_to_string(ShrinkCmd cmd) {
 
 size_t max_chunk_size = 8;
 
-/* Will generate ShrinkCmds for all chunks of sizes 1,2,4,8 in bounds of the
+/* Will generate ShrinkCmds for all chunks of sizes 1,2,3,4,8 in bounds of the
  * given RandomRun length.
  *
  * They will be given in a reverse order (largest chunks first), to maximize our
